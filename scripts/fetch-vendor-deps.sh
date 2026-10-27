@@ -4,7 +4,7 @@
 #
 # 用途：
 #   在 repo sync 之后、开始构建之前，对"后置依赖"做只读检查：
-#     1) kernel/xiaomi/sdm845 是否存在目标分支（默认 lineage-23.2）；
+#     1) kernel/xiaomi/sdm845 是否存在目标分支（默认 lineage-22.2）；
 #     2) vendor/xiaomi/polaris/BoardConfigVendor.mk 是否存在；
 #     3) 提示 Termux APK 需要先执行 vendor/terminalos/scripts/fetch-termux.sh。
 #
@@ -14,7 +14,7 @@
 #
 # 参数：
 #   --source-root DIR          源码根目录；默认当前目录（含 .repo）或 $HOME/android/lineage
-#   --target-branch BRANCH     目标分支，默认 lineage-23.2；可设为 lineage-22.2 用于基线检查
+#   --target-branch BRANCH     目标分支，默认 lineage-22.2（基线）；lineage-23.2 为实验目标
 #   --allow-22.2-pinned-deps   显式允许"内核无 23.2 分支、但 local manifest 已锁定
 #                              revision=lineage-22.2"的实验路径：
 #                              此时内核分支缺失降级为警告（不是阻塞），退出码可为 0；
@@ -52,7 +52,7 @@ readonly TERMINALOS_PATH="vendor/terminalos"
 readonly KERNEL_22_2_SHA="aa8adfe9bf212c6e93238a86980b4024da4f819a"
 
 SOURCE_ROOT=""
-TARGET_BRANCH="lineage-23.2"
+TARGET_BRANCH="lineage-22.2"
 ALLOW_PINNED_DEPS=false
 DRY_RUN=false
 blocking=0
@@ -75,14 +75,14 @@ usage() {
                                        [--allow-22.2-pinned-deps] [--dry-run]
 
 只读检查构建后置依赖：
-  1) kernel/xiaomi/sdm845 是否存在目标分支（默认 lineage-23.2）
+  1) kernel/xiaomi/sdm845 是否存在目标分支（默认 lineage-22.2）
   2) vendor/xiaomi/polaris/BoardConfigVendor.mk 是否存在
   3) Termux APK 的获取提示（需执行 vendor/terminalos/scripts/fetch-termux.sh）
 
 参数：
   --source-root DIR          源码根目录（默认当前目录含 .repo 时用当前目录，
                              否则 $HOME/android/lineage）
-  --target-branch BRANCH     默认 lineage-23.2；可设为 lineage-22.2 检查可构建基线
+  --target-branch BRANCH     默认 lineage-22.2（可构建基线）；lineage-23.2 为实验目标
   --allow-22.2-pinned-deps   显式允许"内核无 23.2 分支，但 local manifest 已锁定
                              revision=lineage-22.2"的实验路径（缺失降级为警告）
   --dry-run                  只打印检查项，不实际读取
@@ -120,7 +120,7 @@ validate_target_branch() {
   case "$TARGET_BRANCH" in
     lineage-23.2|lineage-22.2) ;;
     *)
-      die "不支持的目标分支：${TARGET_BRANCH}。允许：lineage-23.2（默认）或 lineage-22.2（基线）。"
+      die "不支持的目标分支：${TARGET_BRANCH}。允许：lineage-22.2（默认，基线）或 lineage-23.2（实验）。"
       ;;
   esac
 }

@@ -45,10 +45,10 @@ LineageOS 自定义 ROM 项目。
 
 | 仓库 | 路径 | 分支 | 用途 |
 | --- | --- | --- | --- |
-| `GStarX/android_device_xiaomi_polaris` | `device/xiaomi/polaris` | `terminalos/lineage-23.2` | 新增 `terminalos_polaris` 产品配置（fork 自 LineageOS） |
-| `GStarX/android_vendor_terminalos` | `vendor/terminalos` | `terminalos/lineage-23.2` | 产品片段、Termux 预置、静态 overlay |
-| `GStarX/android_packages_apps_TerminalHome` | `packages/apps/TerminalHome` | `terminalos/lineage-23.2` | 默认 HOME / 终端拉起 / 有限重启 / 维护入口 / Lock Task |
-| `GStarX/Polaris-TerminalOS`（本仓库） | 构建机上任意位置 | `main` | 文档、local manifest、构建脚本、验收矩阵 |
+| `GStarX/android_device_xiaomi_polaris` | `device/xiaomi/polaris` | `terminalos/lineage-22.2`、`terminalos/lineage-23.2` | 新增 `terminalos_polaris` 产品配置（fork 自 LineageOS） |
+| `GStarX/android_vendor_terminalos` | `vendor/terminalos` | `terminalos/lineage-22.2`、`terminalos/lineage-23.2` | 产品片段、Termux 预置、静态 overlay（22.2 分支已按该版本缺少的资源做差异适配） |
+| `GStarX/android_packages_apps_TerminalHome` | `packages/apps/TerminalHome` | `terminalos/lineage-22.2`、`terminalos/lineage-23.2` | 默认 HOME / 终端拉起 / 有限重启 / 维护入口 / Lock Task（代码与分支无关） |
+| `GStarX/Polaris-TerminalOS`（本仓库） | 构建机上任意位置 | `main` | 文档、local manifest、CI workflow、验收矩阵 |
 
 其余 LineageOS 仓库（frameworks/base、SystemUI、vendor/lineage 等）**继续跟踪上游**，暂不 Fork。
 `frameworks/base` 只有在 Phase 3 证明标准 Lock Task / Device Policy 无法满足"禁止退出 + 完整快捷设置"时才考虑改动。
@@ -58,37 +58,43 @@ LineageOS 自定义 ROM 项目。
 | 阶段 | 内容 | 状态 |
 | --- | --- | --- |
 | Phase 0 | 设备身份、Bootloader、分区、恢复路径核验 | **未执行**（需真机，只由首席操作；设备据称当前运行 iOS16 移植系统） |
-| Phase 1 | 未修改 LineageOS 基线构建（建议先 22.2，23.2 为实验） | **阻塞**：无 Linux 构建机；23.2 缺内核/blobs 分支 |
+| Phase 1 | 云构建：先 `lineage-22.2`（官方支持基线），再 23.2 实验 | **CI 已配置**：`validate` / `sync-check` 可跑；`build-rom` 等待够大的 runner |
 | Phase 1K | 内核审计与 4.19 / 5.4 / 5.10+ 候选评估 | **未开始**（计划见 `docs/09`） |
-| Phase 2 | Termux + TerminalHome 预置与自启动 | 代码脚手架已提交，**未编译** |
-| Phase 3 | 锁定模式、导航栏隐藏、快捷设置保留 | 方案评估已写，**未实现/未验证** |
+| Phase 2 | Termux + TerminalHome 预置与自启动 | 代码已提交；**待云构建** |
+| Phase 3 | 锁定模式、导航栏隐藏、快捷设置保留 | 方案已写；22.2 缺锁任务 QS API，需最小框架补丁（`docs/08`） |
 | Phase 4 | 精简与稳定性 | 未开始 |
-| Phase 5 | 发布、升级、回滚 | 版本与记录模板已写，未开始 |
+| Phase 5 | 发布、升级、回滚 | 版本与记录模板已写；Release 由 CI 可选发布 |
 
-## 快速开始（在 Linux 构建机上）
+## 云构建（GitHub Actions）——本项目不做本地构建
+
+| workflow | 触发 | runner | 作用 |
+| --- | --- | --- | --- |
+| `validate.yml` | push / PR | GitHub 托管 | 静态校验：manifest、脚本语法、禁止刷机命令、跨仓库分支存在性 |
+| `sync-check.yml` | 手动 / push `ci/**` | GitHub 托管 | 同步终端相关项目 + 结构契约校验 + Termux sha256 |
+| `build-rom.yml` | 手动 | **需 ≥350 GB 磁盘的 self-hosted / larger runner** | 整包构建 22.2（先 baseline 再 terminalos），产物 upload + 可选 Release |
+
+详见 [`docs/12_云构建_GitHub_Actions.md`](docs/12_云构建_GitHub_Actions.md)。
+托管标准 runner 只有约 14 GB 磁盘，**不能**整包构建 LineageOS；不要再尝试在本机或托管 runner 上硬编。
+
+## 快速开始（云构建，不在本地编译）
 
 ```bash
-# 0. 准备构建机（Ubuntu，>=64 GB RAM、>=400 GB 可用空间；详见 docs/02）
-bash scripts/setup-build-host.sh
+# 0) 一次性：给仓库配置一个够大的 runner（self-hosted 云主机或 larger runner），见 docs/12
+#    托管标准 runner 只有 ~14 GB 磁盘，不能整包构建
 
-# 1. 初始化源码 + 注入本项目 local manifest
-bash scripts/init-sources.sh --branch lineage-23.2
-
-# 2. 同步
-bash scripts/sync-sources.sh
-
-# 3. 检查后置依赖（内核分支 / blobs / Termux APK）
-bash scripts/fetch-vendor-deps.sh
-bash vendor/terminalos/scripts/fetch-termux.sh
-
-# 4. 基线构建（验证未修改 LineageOS 能否构建）
-bash scripts/build-baseline.sh
-
-# 5. TerminalOS 构建
-bash scripts/build-terminalos.sh
+# 1) 校验：push 任意提交即触发 validate.yml
+# 2) 同步校验：Actions → sync-check → Run workflow，lineage_branch=lineage-22.2
+#    或 push 一个 ci/22.2-sync 分支触发
+# 3) 整包构建（需要大 runner）：Actions → build-rom → Run workflow
+#    lineage_branch = lineage-22.2
+#    build_target  = baseline     # 先验证未修改基线
+#    runner        = ["self-hosted","linux","x64","lineage-builder"]（按你的 runner label）
+# 4) 基线通过后，再跑 build_target = terminalos（Termux + TerminalHome 产品）
 ```
 
-> 本机（Windows、23.7 GB RAM、16 核、1.7 TB 可用、无 WSL）**不作为主构建机**。
+本地只做静态检查（`bash -n`、`--help`、结构化自测）；**不执行 Android 编译**。
+
+> 本机（Windows、23.7 GB RAM、16 核、1.7 TB 可用、无 WSL）**不作为构建机**。
 > 除 Phase 0 的真机核验外，刷机只由首席执行；本仓库不含任何 fastboot/adb 刷机脚本。
 
 ## 文档索引
@@ -105,6 +111,7 @@ bash scripts/build-terminalos.sh
 - [`docs/09_内核升级评估_K0.md`](docs/09_内核升级评估_K0.md)
 - [`docs/10_发布与升级.md`](docs/10_发布与升级.md)
 - [`docs/11_决策记录.md`](docs/11_决策记录.md) —— 影响后续工作的决策与理由
+- [`docs/12_云构建_GitHub_Actions.md`](docs/12_云构建_GitHub_Actions.md) —— 云构建/runner/首次跑 22.2 流程
 - [`acceptance/验收测试矩阵.md`](acceptance/验收测试矩阵.md) —— T01–T15
 
 ## 边界与安全约定

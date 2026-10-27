@@ -11,8 +11,8 @@
 #   bash scripts/init-sources.sh [选项]
 #
 # 参数：
-#   --branch BRANCH          manifest 分支，默认 lineage-23.2；
-#                            允许 lineage-22.2（当前唯一可构建基线）
+#   --branch BRANCH          manifest 分支，默认 lineage-22.2（可构建基线）；
+#                            允许 lineage-23.2（Android 16 实验目标）
 #   --source-root DIR        源码根目录，默认 $HOME/android/lineage
 #   --local-manifest FILE    指定 terminalos.xml 路径；
 #                            默认在项目仓库 local_manifests/terminalos.xml 查找
@@ -37,7 +37,7 @@ PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 readonly PROJECT_ROOT
 
 readonly MANIFEST_URL="https://github.com/LineageOS/android.git"
-readonly DEFAULT_BRANCH="lineage-23.2"
+readonly DEFAULT_BRANCH="lineage-22.2"
 readonly DEFAULT_SOURCE_ROOT="${HOME}/android/lineage"
 
 BRANCH="$DEFAULT_BRANCH"
@@ -67,7 +67,7 @@ usage() {
 初始化 LineageOS 源码树（默认 $HOME/android/lineage），并复制 TerminalOS local manifest。
 
 选项：
-  --branch BRANCH        默认 lineage-23.2；允许 lineage-22.2（可构建基线）
+  --branch BRANCH        默认 lineage-22.2（可构建基线）；lineage-23.2 为实验目标
   --source-root DIR      指定源码根目录（默认 $HOME/android/lineage）
   --local-manifest FILE  指定 local_manifests/terminalos.xml 路径
   --no-local-manifest    不复制 local manifest（纯上游 lineage-22.2 基线用）
@@ -113,7 +113,7 @@ validate_branch() {
   case "$BRANCH" in
     lineage-23.2|lineage-22.2) ;;
     *)
-      die "不支持的分支：${BRANCH}。允许：lineage-23.2（默认，Android 16 目标）或 lineage-22.2（当前唯一可构建基线）。"
+      die "不支持的分支：${BRANCH}。允许：lineage-22.2（默认，可构建基线）或 lineage-23.2（Android 16 实验目标）。"
       ;;
   esac
   if [[ $BRANCH == lineage-22.2 ]]; then
@@ -152,7 +152,15 @@ find_local_manifest() {
     printf '%s\n' "$LOCAL_MANIFEST"
     return 0
   fi
+  # 按分支选择对应的 local manifest：
+  #   lineage-22.2 -> local_manifests/terminalos-22.2.xml（revision 指向 terminalos/lineage-22.2）
+  #   lineage-23.2 -> local_manifests/terminalos.xml（revision 指向 terminalos/lineage-23.2）
+  local branch_manifest="terminalos.xml"
+  if [[ $BRANCH == lineage-22.2 ]]; then
+    branch_manifest="terminalos-22.2.xml"
+  fi
   local -a candidates=(
+    "$PROJECT_ROOT/local_manifests/${branch_manifest}"
     "$PROJECT_ROOT/local_manifests/terminalos.xml"
     "$SOURCE_ROOT/.repo/local_manifests/terminalos.xml"
   )
@@ -163,7 +171,7 @@ find_local_manifest() {
       return 0
     fi
   done
-  die "未找到 local_manifests/terminalos.xml。请把项目仓库放到构建主机（预期：${PROJECT_ROOT}/local_manifests/terminalos.xml），或用 --local-manifest 指定。"
+  die "未找到 local manifest（期望 ${PROJECT_ROOT}/local_manifests/${branch_manifest}）。请把项目仓库放到构建主机，或用 --local-manifest 指定。"
 }
 
 validate_local_manifest() {
