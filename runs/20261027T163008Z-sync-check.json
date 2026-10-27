@@ -1,0 +1,11 @@
+{
+  "kind": "sync-check",
+  "status": "failure",
+  "timestamp": "20261027T163008Z",
+  "repository": "GStarX/Polaris-TerminalOS",
+  "run_id": "40540851203",
+  "run_url": "https://github.com/GStarX/Polaris-TerminalOS/actions/runs/40540851203",
+  "ref": "refs/heads/ci/22.2-sync",
+  "sha": "9c3b4edfd9bf189596e2b1522c98cb64a6c897a8",
+  "detail": {"lineage_branch":"lineage-22.2","runner":"ubuntu-24.04"}
+}
