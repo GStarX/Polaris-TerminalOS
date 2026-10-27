@@ -90,7 +90,8 @@ Termux 校验（terminalos）→ `lunch <product>-userdebug` → `brunch <produc
 ## 4. 第一次跑 22.2 的建议顺序
 
 1. 推一个 `ci/22.2-sync` 分支（或手动 dispatch `sync-check` 选 `lineage-22.2`）→ 看结构校验是否全绿；
-2. 有够大的 runner 后，手动 dispatch `build-rom`：
+2. 有够大的 runner 后，手动 dispatch `build-rom`（runner 参数填 `["self-hosted","linux","x64","lineage-builder"]`，
+   完整步骤与失败分诊见 [`docs/14_整包构建运行手册.md`](14_整包构建运行手册.md)）：
    - 先 `build_target=baseline`（未修改基线，验证构建链与设备树/内核/blobs 组合能编过）；
    - 再 `build_target=terminalos`（带 TerminalOS 产品：Termux 预置 + TerminalHome + overlay）。
 3. 每次构建都会在 `ci-status` 分支留下 `runs/<时间戳>-<kind>.json`（状态、分支、run 链接），
@@ -107,8 +108,11 @@ Termux 校验（terminalos）→ `lunch <product>-userdebug` → `brunch <produc
 
 - 托管 runner 上：`validate` / `sync-check` 基本免费（公共仓库）；`build-rom` 不可行（磁盘不足，preflight fail）。
 - self-hosted：成本 = 云主机费用；ccache 50 GB 可显著降低二次构建时间（首次仍是最慢的）。
-- GitHub Actions 单 job 上限 6 小时（本 workflow 设 900 分钟，但托管/自建实际都会被 6 小时截断）：
-  首次整包在 8 核机器上可能超过 6 小时，建议 ≥16 核或分阶段（先 `m` 关键模块验证，再整包）。
+- **时间上限口径（已修正）**：GitHub **托管** runner 的单 job 有 **6 小时硬上限**；
+  **self-hosted 不受 6 小时限制**，只受 workflow 的 `timeout-minutes`（本仓库 `build-rom` 设 900 分钟）
+  与机器资源约束。首次整包在 8 核 / 32 GB 上耗时可能超过 6 小时，建议 ≥16 核、64 GB 内存；
+  实际时间预算、失败分诊与产物验收见 [`docs/14_整包构建运行手册.md`](14_整包构建运行手册.md)。
+- runner label 约定（与 docs/14 保持一致）：`["self-hosted","linux","x64","lineage-builder"]`。
 - **未验证声明**：本 workflow 未在真实的大 runner 上跑完过一次整包；第一次失败是正常的，按日志迭代。
 
 ## 7. 安全
