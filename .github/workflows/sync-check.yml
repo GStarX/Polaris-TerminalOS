@@ -107,7 +107,8 @@ jobs:
           set -euo pipefail
           cd "$WORKSPACE/vendor/terminalos"
           bash scripts/fetch-termux.sh
-          sha256sum --check prebuilt/Termux.apk.sha256
+          # sha256 文件里是相对文件名（Termux.apk），必须在 prebuilt/ 目录内校验
+          ( cd prebuilt && sha256sum --check Termux.apk.sha256 )
 
       - name: 结构校验（产品/预置/overlay/禁止刷机命令）
         run: |
@@ -128,6 +129,7 @@ jobs:
         env:
           JOB_KIND: sync-check
           JOB_STATUS: ${{ job.status }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           JOB_DETAIL=$(printf '{"lineage_branch":"%s","runner":"ubuntu-24.04"}' "$LINEAGE_BRANCH") \
             bash "$GITHUB_WORKSPACE/.github/scripts/publish-status.sh"

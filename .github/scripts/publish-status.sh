@@ -17,8 +17,13 @@
 #   - 任何失败只打印错误并 exit 0，绝不让"写状态"把整个 CI 变成失败。
 set -uo pipefail
 
+# 状态写入是"锦上添花"：缺 token 时只警告，不得让 CI 失败
+if [[ -z "${GITHUB_TOKEN:-}" ]]; then
+    echo 'WARN: GITHUB_TOKEN 未注入，跳过 ci-status 写入（检查 workflow 的 env 与 permissions）'
+    exit 0
+fi
+
 : "${GITHUB_REPOSITORY:?}"
-: "${GITHUB_TOKEN:?}"
 : "${JOB_KIND:=unknown}"
 : "${JOB_STATUS:=unknown}"
 : "${JOB_DETAIL:={}}"

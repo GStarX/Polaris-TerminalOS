@@ -5,6 +5,8 @@ name: validate
 
 on:
   push:
+    branches-ignore:
+      - ci-status
   pull_request:
   workflow_dispatch:
 
