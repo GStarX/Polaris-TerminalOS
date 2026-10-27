@@ -12,6 +12,7 @@ name: build-rom
 # 触发方式：仅 workflow_dispatch（手动）。
 # 产物：artifact 上传（默认 7 天）+ 可选创建 GitHub Release。
 # 状态：结果写回 ci-status 分支，便于核对。
+# 运行手册：docs/14_整包构建运行手册.md（参数怎么填、时间预算、失败分诊、产物验收）。
 
 on:
   workflow_dispatch:
@@ -53,6 +54,7 @@ concurrency:
 jobs:
   build:
     runs-on: ${{ fromJSON(inputs.runner) }}
+    # self-hosted 用它兜底；GitHub 托管 runner 单 job 上限 6 小时（360 分钟），会被平台先截断
     timeout-minutes: 900
     env:
       LINEAGE_BRANCH: ${{ inputs.lineage_branch }}
@@ -129,11 +131,30 @@ jobs:
           echo "using local manifest: $src -> $dest"
           sed -n '1,120p' "$dest"
 
-      - name: repo sync（全量，耗时长）
+      - name: repo sync（全量，耗时长；网络抖动自动重试）
         run: |
-          set -euo pipefail
+          set -uo pipefail
           cd "$WORKSPACE"
-          repo sync -c --no-tags -j"$(nproc)"
+          # 整包同步量远大于 sync-check（后者在托管 runner 上曾耗时约 13 分钟且出现链路波动），
+          # 失败重试比整个 job 重跑便宜得多。前两次普通同步，第三次加 --force-sync 修工作树。
+          attempt=1
+          while :; do
+              echo "== repo sync 第 ${attempt}/3 次 =="
+              if [ "$attempt" -ge 3 ]; then
+                  if repo sync -c --no-tags --force-sync -j"$(nproc)"; then ok=1; else ok=0; fi
+              else
+                  if repo sync -c --no-tags -j"$(nproc)"; then ok=1; else ok=0; fi
+              fi
+              if [ "$ok" -eq 1 ]; then break; fi
+              if [ "$attempt" -ge 3 ]; then
+                  echo "ERROR: repo sync 连续 3 次失败（网络或上游问题），见上方日志"
+                  exit 1
+              fi
+              attempt=$((attempt + 1))
+              echo "repo sync 失败，60 秒后重试（第 ${attempt}/3 次）"
+              sleep 60
+          done
+          echo "repo sync 成功（第 ${attempt} 次）"
 
       - name: 安装 ccache（可选）
         if: ${{ inputs.ccache }}
@@ -193,6 +214,13 @@ jobs:
           fi
           set -u
 
+      - name: ccache 统计（可选，用于判断二次构建能否提速）
+        if: ${{ inputs.ccache }}
+        continue-on-error: true
+        run: |
+          ccache -s
+          du -sh "$CCACHE_DIR" 2>/dev/null || true
+
       - name: 收集产物与构建信息
         run: |
           set -euo pipefail
@@ -200,10 +228,22 @@ jobs:
           art="$GITHUB_WORKSPACE/out/artifacts"
           mkdir -p "$art"
           shopt -s nullglob
-          files=("$out_dir"/*.zip "$out_dir"/*.img "$out_dir"/*.tar.md5)
-          if (( ${#files[@]} == 0 )); then
-              echo "ERROR: 构建目录中没有产物: $out_dir"; exit 1
+          # 必须区分"可刷写包"与中间产物：target_files 等中间 zip 不能刷机，
+          # 只收集它们会造成"构建看似成功、实际没有可刷包"的误判。
+          roms=()
+          for f in "$out_dir"/*.zip; do
+              case "$f" in
+                  *target_files*) echo "跳过中间产物: $f"; continue ;;
+              esac
+              roms+=("$f")
+          done
+          if (( ${#roms[@]} == 0 )); then
+              echo "ERROR: 没有找到可刷写 ROM 包（$out_dir 下 *.zip，已排除 target_files）"
+              echo "       通常意味着 bacon/ota 没跑完，先看 out/ci/build.log 尾部"
+              exit 1
           fi
+          files=("${roms[@]}" "$out_dir"/*.img "$out_dir"/*.tar.md5)
+          printf '可刷写包: %s\n' "${roms[@]}"
           for f in "${files[@]}"; do cp -v "$f" "$art/"; done
           cd "$art"
           sha256sum * > sha256sums.txt
