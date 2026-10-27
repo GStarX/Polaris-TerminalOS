@@ -21,23 +21,22 @@
 
 ## Phase 1：LineageOS 基线构建（Android 16 前的临时基线）
 
-### 1A 可执行路线：`lineage-22.2` 未修改基线（推荐先做）
+### 1A 可执行路线：`lineage-22.2` 未修改基线（推荐先做，云构建）
 
 | ID | 任务 | 负责人 | 状态 | 交付/证据 |
 | --- | --- | --- | --- | --- |
-| P1-01 | 构建机安装依赖、repo、ccache、git-lfs | 主机官 | ready | `scripts/setup-build-host.sh` 输出日志 |
-| P1-02 | `repo init -b lineage-22.2` + `repo sync`（纯上游基线：用 `init-sources.sh --branch lineage-22.2 --no-local-manifest`，不叠加自有仓库） | 主机官 | ready | 同步日志、关键仓库 commit 列表 |
-| P1-03 | 拉取 vendor blobs（`TheMuppets` 22.2 两个仓库）与内核（22.2） | 主机官 | ready | blobs 路径存在性检查、内核 commit |
-| P1-04 | `breakfast polaris` + `brunch polaris` 未修改基线构建 | 主机官 | ready | `out/baseline-artifacts.txt` + 构建日志 + 产物 sha256 |
-| P1-05 | 记录构建耗时、失败点、磁盘占用 | 主机官 | ready | `docs/05` 记录 |
-| P1-06 | 基线 ROM 实机刷入 + 基础硬件验收（T01 前置的"未修改系统"验证） | 首席 | blocked | 实机测试记录；需 P0 全部完成 |
+| P1-01 | 云构建 runner 就绪（self-hosted 云主机或 larger runner，≥350 GB 磁盘） | 主机官 + 用户决策 | blocked | runner 规格与 label；见 docs/12 |
+| P1-02 | 基线：`build-rom`、`build_target=baseline`、branch=lineage-22.2（使用 `local_manifests/baseline-22.2.xml`） | 主机官（触发 CI） | ready | Actions 运行链接 + `build-info.txt` |
+| P1-03 | 基线产物收集（zip / recovery.img / boot.img / dtbo.img）+ sha256 | 主机官 | ready | artifact + `sha256sums.txt` |
+| P1-04 | 基线构建日志分析、首个失败点归类（工具链/分区/固件断言） | 主机官 + 方案甲 | ready | `build.log` + 失败点清单 |
+| P1-05 | 记录构建耗时、磁盘占用、首次/ccache 二次耗时 | 主机官 | ready | docs/05 记录条目 |
+| P1-06 | 基线 ROM 实机刷入 + 基础硬件验收（未修改系统） | 首席 | blocked | 实机测试记录；需 P0 全部完成 |
 
 ### 1B 实验路线：`lineage-23.2`（Android 16）
 
 | ID | 任务 | 负责人 | 状态 | 交付/证据 | 说明 |
 | --- | --- | --- | --- | --- | --- |
-| P1-11 | 用本项目 local manifest 在 23.2 上完成 `repo sync`（内核/blobs 锁 22.2） | 主机官 | ready | 同步日志 + 各仓库 commit 表 | 已验证的可行性前置 |
-| P1-12 | 23.2 基线构建尝试，逐项记录失败点（SEPolicy、HAL、API 变化、内核接口） | 主机官 + 方案甲 | ready | 失败分类清单 + 每类最小修复方案 | 预期会失败，失败本身是交付物 |
+| P1-11 | 用本项目 local manifest 在 23.2 上完成 `repo sync`（内核/blobs 锁 22.2） | 主机官 | ready | 同步日志 + 各仓库 commit 表 | 已验证的可行性前置 || P1-12 | 23.2 基线构建尝试，逐项记录失败点（SEPolicy、HAL、API 变化、内核接口） | 主机官 + 方案甲 | ready | 失败分类清单 + 每类最小修复方案 | 预期会失败，失败本身是交付物 |
 | P1-13 | 判定 23.2 + 4.9 内核组合是否可行；给出"可行/不可行/需内核先行"结论 | 复核官 | blocked | 结论文档 | 依赖 P1-12 |
 | P1-14 | 23.2 启动验证（如构建成功） | 首席 | blocked | 启动记录 | 依赖 P1-12、P0 |
 
