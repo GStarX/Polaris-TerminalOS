@@ -100,9 +100,9 @@ OVERLAY="${VENDOR}/overlay/frameworks/base/core/res/res/values/config.xml"
 check_file "${OVERLAY}"
 check_contains "${OVERLAY}" 'config_showNavigationBar' "overlay hides navigation bar"
 if [[ "$LINEAGE_BRANCH" == "lineage-22.2" ]]; then
-    check_absent "${OVERLAY}" 'config_allowedSupervisionRolePackages' "22.2 overlay does not use 23.2-only supervision resource"
+    check_absent "${OVERLAY}" '<string name="config_allowedSupervisionRolePackages"' "22.2 overlay does not use 23.2-only supervision resource"
 else
-    check_contains "${OVERLAY}" 'config_allowedSupervisionRolePackages' "23.2 overlay allows supervision role for TerminalHome"
+    check_contains "${OVERLAY}" '<string name="config_allowedSupervisionRolePackages"' "23.2 overlay allows supervision role for TerminalHome"
 fi
 
 # --- 6. 禁止刷机命令 ---

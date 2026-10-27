@@ -112,6 +112,7 @@ LineageOS 自定义 ROM 项目。
 - [`docs/10_发布与升级.md`](docs/10_发布与升级.md)
 - [`docs/11_决策记录.md`](docs/11_决策记录.md) —— 影响后续工作的决策与理由
 - [`docs/12_云构建_GitHub_Actions.md`](docs/12_云构建_GitHub_Actions.md) —— 云构建/runner/首次跑 22.2 流程
+- [`docs/13_首次云构建记录.md`](docs/13_首次云构建记录.md) —— 真实云运行记录（run id、通过/失败项）
 - [`acceptance/验收测试矩阵.md`](acceptance/验收测试矩阵.md) —— T01–T15
 
 ## 边界与安全约定
