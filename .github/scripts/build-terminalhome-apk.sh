@@ -51,7 +51,7 @@ echo "[2/7] aapt2 link"
     --target-sdk-version 35 \
     --version-code 1 \
     --version-name 0.1.0 \
-    -R "$WORK/res.zip"
+    "$WORK/res.zip"
 
 echo "[3/7] collect java sources"
 find "$SRC_DIR/src" "$WORK/gen" -name '*.java' | sort > "$WORK/sources.txt"

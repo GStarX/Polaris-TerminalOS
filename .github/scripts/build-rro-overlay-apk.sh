@@ -44,6 +44,7 @@ echo "[2/4] aapt2 link"
     --manifest "$OVERLAY_DIR/AndroidManifest.xml" \
     --min-sdk-version 28 \
     --target-sdk-version 35 \
+    --auto-add-overlay \
     -R "$WORK/res.zip"
 
 echo "[3/4] zipalign"
